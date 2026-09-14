@@ -1,0 +1,35 @@
+# Render Blueprint for Resume Matcher — one-click Docker deploy.
+#
+# Deploy: Render Dashboard → New → Blueprint → select this repo/branch.
+# Render will prompt for LLM_API_KEY (marked sync: false below).
+#
+# Notes:
+# - The app listens on Render's injected PORT automatically (see docker/start.sh).
+# - FRONTEND_BASE_URL defaults to Render's RENDER_EXTERNAL_URL for CORS.
+# - The disk persists the SQLite DB, resumes, and settings across deploys.
+#   Disks require a paid instance type (Starter or higher).
+# - Free-tier test without persistence: delete the `disk` block below and set
+#   `plan: free` (data will be wiped on every restart/redeploy).
+services:
+  - type: web
+    name: resume-matcher
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /api/v1/health
+    disk:
+      name: resume-data
+      mountPath: /app/backend/data
+      sizeGB: 1
+    envVars:
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_LLM
+        value: WARNING
+      - key: LLM_PROVIDER
+        value: openai
+      # LLM_MODEL and LLM_API_BASE intentionally omitted: the backend defaults
+      # apply when unset. Add them in the dashboard if you need overrides
+      # (e.g. another provider/model or an Ollama base URL).
+      - key: LLM_API_KEY
+        sync: false

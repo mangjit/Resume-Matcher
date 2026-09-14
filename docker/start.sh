@@ -166,6 +166,13 @@ fi
 if [ -n "${LLM_API_BASE:-}" ] || [ -n "${LLM_API_BASE_FILE:-}" ]; then
     file_env "LLM_API_BASE"
 fi
+
+# On Render, default the public base URL (used for CORS) to the platform URL
+# unless FRONTEND_BASE_URL was set explicitly.
+if [ -z "${FRONTEND_BASE_URL:-}" ] && [ -n "${RENDER_EXTERNAL_URL:-}" ]; then
+    export FRONTEND_BASE_URL="${RENDER_EXTERNAL_URL}"
+    info "FRONTEND_BASE_URL not set, using RENDER_EXTERNAL_URL: ${BOLD}${FRONTEND_BASE_URL}${NC}"
+fi
 APP_LOG_LEVEL="$(normalize_log_level "${LOG_LEVEL}" "INFO" "LOG_LEVEL")"
 LLM_LOG_LEVEL="$(normalize_log_level "${LOG_LLM}" "WARNING" "LOG_LLM")"
 export LOG_LEVEL="${APP_LOG_LEVEL}"
