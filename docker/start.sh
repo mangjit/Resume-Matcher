@@ -10,9 +10,16 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
-# Internal port configuration for single-port deployment.
-FRONTEND_PORT="3000"
-BACKEND_PORT="8000"
+# Port configuration for single-port deployment.
+# Platforms like Render inject PORT (default 10000) and route public traffic
+# to it, so the public frontend listens on PORT while the API stays internal.
+FRONTEND_PORT="${PORT:-3000}"
+BACKEND_PORT="${BACKEND_PORT:-8000}"
+if [ "${FRONTEND_PORT}" = "${BACKEND_PORT}" ]; then
+    BACKEND_PORT="8001"
+fi
+# Tell the Next.js rewrite proxy where the internal API lives.
+export BACKEND_ORIGIN="http://127.0.0.1:${BACKEND_PORT}"
 
 # Print banner
 print_banner() {
@@ -226,23 +233,45 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port "${BACKEND_PORT}" --log-lev
 BACKEND_PID=$!
 trap cleanup SIGTERM SIGINT SIGQUIT
 
-# Wait for backend to be ready
-info "Waiting for backend to be ready..."
-for i in {1..30}; do
-    if curl -s "http://127.0.0.1:${BACKEND_PORT}/api/v1/health" > /dev/null 2>&1; then
-        status "Backend is ready (PID: $BACKEND_PID)"
+# Wait for backend to be ready. Cold imports (notably LiteLLM) can take well
+# over a minute on throttled free-tier CPUs, so allow several minutes.
+# Overridable via BACKEND_STARTUP_TIMEOUT (seconds, minimum 10).
+BACKEND_STARTUP_TIMEOUT="${BACKEND_STARTUP_TIMEOUT:-180}"
+if ! [[ "${BACKEND_STARTUP_TIMEOUT}" =~ ^[0-9]+$ ]] || [ "${BACKEND_STARTUP_TIMEOUT}" -lt 10 ]; then
+    warn "Invalid BACKEND_STARTUP_TIMEOUT='${BACKEND_STARTUP_TIMEOUT}', using 180"
+    BACKEND_STARTUP_TIMEOUT="180"
+fi
+info "Waiting for backend to be ready (timeout: ${BACKEND_STARTUP_TIMEOUT}s)..."
+BACKEND_READY=""
+for ((i = 1; i <= BACKEND_STARTUP_TIMEOUT; i++)); do
+    if curl -s --max-time 2 "http://127.0.0.1:${BACKEND_PORT}/api/v1/health" > /dev/null 2>&1; then
+        status "Backend is ready (PID: $BACKEND_PID, took ${i}s)"
+        BACKEND_READY="1"
         break
     fi
     if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
-        error "Backend process (PID: $BACKEND_PID) died during startup"
+        error "Backend process (PID: $BACKEND_PID) died during startup (check the traceback above)"
         exit 1
     fi
-    if [ $i -eq 30 ]; then
-        error "Backend failed to start within 30 seconds"
-        exit 1
+    if [ $((i % 30)) -eq 0 ]; then
+        info "Still waiting for backend... (${i}s elapsed)"
     fi
     sleep 1
 done
+if [ -z "${BACKEND_READY}" ]; then
+    error "Backend failed to respond within ${BACKEND_STARTUP_TIMEOUT} seconds"
+    if kill -0 "$BACKEND_PID" 2>/dev/null; then
+        error "Backend process is still alive (PID: $BACKEND_PID) — likely still importing on a slow CPU."
+    else
+        error "Backend process is no longer running — check the traceback in the logs above."
+    fi
+    if (echo > "/dev/tcp/127.0.0.1/${BACKEND_PORT}") 2>/dev/null; then
+        info "Port ${BACKEND_PORT} is accepting connections (app may be stuck in startup)."
+    else
+        warn "Nothing is listening on port ${BACKEND_PORT}."
+    fi
+    exit 1
+fi
 
 # Start frontend
 echo ""
