@@ -1,4 +1,4 @@
-# Render Blueprint for Resume Matcher — one-click Docker deploy.
+# Render Blueprint for Resume Matcher — one-click Docker deploy (FREE tier).
 #
 # Deploy: Render Dashboard → New → Blueprint → select this repo/branch.
 # Render will prompt for LLM_API_KEY (marked sync: false below).
@@ -6,21 +6,20 @@
 # Notes:
 # - The app listens on Render's injected PORT automatically (see docker/start.sh).
 # - FRONTEND_BASE_URL defaults to Render's RENDER_EXTERNAL_URL for CORS.
-# - The disk persists the SQLite DB, resumes, and settings across deploys.
-#   Disks require a paid instance type (Starter or higher).
-# - Free-tier test without persistence: delete the `disk` block below and set
-#   `plan: free` (data will be wiped on every restart/redeploy).
+# - FREE tier = no persistent disk: the SQLite DB, resumes, and settings are
+#   wiped on every restart/redeploy. Free services also sleep after 15 min idle.
+# - For persistence, upgrade to Starter+: set `plan: starter` and add:
+#     disk:
+#       name: resume-data
+#       mountPath: /app/backend/data
+#       sizeGB: 1
 services:
   - type: web
     name: resume-matcher
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: starter
+    plan: free
     healthCheckPath: /api/v1/health
-    disk:
-      name: resume-data
-      mountPath: /app/backend/data
-      sizeGB: 1
     envVars:
       - key: LOG_LEVEL
         value: INFO
