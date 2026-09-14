@@ -26,6 +26,7 @@ export {
   fetchResumeList,
   updateResume,
   downloadResumePdf,
+  downloadResumeDocx,
   deleteResume,
   type ResumeListItem,
 } from './resume';

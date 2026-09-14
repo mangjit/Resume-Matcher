@@ -1,11 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { sanitizeFilename } from '@/lib/utils/download';
+import { buildResumeFilename, sanitizeFilename } from '@/lib/utils/download';
 
 describe('sanitizeFilename', () => {
   describe('Basic functionality', () => {
     it('should add .pdf extension to a simple title', () => {
       const result = sanitizeFilename('My Resume', 'test-id-123');
       expect(result).toBe('My Resume.pdf');
+    });
+
+    it('should add .docx extension when requested', () => {
+      const result = sanitizeFilename('My Resume', 'test-id-123', 'resume', 'docx');
+      expect(result).toBe('My Resume.docx');
+    });
+
+    it('should use .docx extension in fallbacks', () => {
+      expect(sanitizeFilename(null, 'abc-123', 'resume', 'docx')).toBe('resume_abc-123.docx');
+      expect(sanitizeFilename(null, 'cover-id', 'cover-letter', 'docx')).toBe(
+        'cover_letter_cover-id.docx'
+      );
     });
 
     it('should use resume type by default', () => {
@@ -400,5 +412,23 @@ describe('sanitizeFilename', () => {
       const graphemeCount = Array.from(result.slice(0, -4)).length;
       expect(graphemeCount).toBeLessThanOrEqual(100);
     });
+  });
+});
+
+describe('buildResumeFilename', () => {
+  it('should build a personalized PDF filename by default', () => {
+    expect(buildResumeFilename('Jane Doe', 'Acme', 'id-1', 'resume')).toBe(
+      'Jane Doe - Resume - Acme.pdf'
+    );
+    expect(buildResumeFilename('Jane Doe', null, 'id-1', 'cover-letter')).toBe(
+      'Jane Doe - Cover Letter.pdf'
+    );
+  });
+
+  it('should build a personalized DOCX filename when requested', () => {
+    expect(buildResumeFilename('Jane Doe', 'Acme', 'id-1', 'resume', 'docx')).toBe(
+      'Jane Doe - Resume - Acme.docx'
+    );
+    expect(buildResumeFilename(null, null, 'id-1', 'resume', 'docx')).toBe('resume_id-1.docx');
   });
 });

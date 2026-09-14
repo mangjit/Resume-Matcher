@@ -275,6 +275,26 @@ export async function downloadResumePdf(
   return await res.blob();
 }
 
+/** Builds the backend URL for DOCX resume export */
+export function getResumeDocxUrl(resumeId: string, pageSize: 'A4' | 'LETTER' = 'A4'): string {
+  const normalizedId = normalizeResumeId(resumeId);
+  const params = new URLSearchParams({ pageSize });
+  return `${API_BASE}/resumes/${encodeURIComponent(normalizedId)}/docx?${params.toString()}`;
+}
+
+export async function downloadResumeDocx(
+  resumeId: string,
+  pageSize: 'A4' | 'LETTER' = 'A4'
+): Promise<Blob> {
+  const url = getResumeDocxUrl(resumeId, pageSize);
+  const res = await apiFetch(url);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to download resume (status ${res.status}): ${text}`);
+  }
+  return await res.blob();
+}
+
 /** Deletes a resume by ID */
 export async function deleteResume(resumeId: string): Promise<void> {
   const res = await apiDelete(`/resumes/${encodeURIComponent(resumeId)}`);
@@ -334,6 +354,26 @@ export async function downloadCoverLetterPdf(
   locale?: Locale
 ): Promise<Blob> {
   const url = getCoverLetterPdfUrl(resumeId, pageSize, locale);
+  const res = await apiFetch(url);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to download cover letter (status ${res.status}): ${text}`);
+  }
+  return await res.blob();
+}
+
+/** Builds the backend URL for DOCX cover letter export */
+export function getCoverLetterDocxUrl(resumeId: string, pageSize: 'A4' | 'LETTER' = 'A4'): string {
+  const normalizedId = normalizeResumeId(resumeId);
+  const params = new URLSearchParams({ pageSize });
+  return `${API_BASE}/resumes/${encodeURIComponent(normalizedId)}/cover-letter/docx?${params.toString()}`;
+}
+
+export async function downloadCoverLetterDocx(
+  resumeId: string,
+  pageSize: 'A4' | 'LETTER' = 'A4'
+): Promise<Blob> {
+  const url = getCoverLetterDocxUrl(resumeId, pageSize);
   const res = await apiFetch(url);
   if (!res.ok) {
     const text = await res.text().catch(() => '');

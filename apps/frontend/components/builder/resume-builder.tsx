@@ -33,9 +33,13 @@ import {
 import { PaginatedPreview } from '@/components/preview';
 import {
   downloadResumePdf,
+  downloadResumeDocx,
   downloadCoverLetterPdf,
+  downloadCoverLetterDocx,
   getResumePdfUrl,
+  getResumeDocxUrl,
   getCoverLetterPdfUrl,
+  getCoverLetterDocxUrl,
   fetchResume,
   updateResume,
   updateCoverLetter,
@@ -961,7 +965,7 @@ const ResumeBuilderContent = () => {
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownload = async (format: 'pdf' | 'docx' = 'pdf') => {
     if (!resumeId) {
       showNotification(t('builder.alerts.downloadNotAvailable'), 'warning');
       return;
@@ -972,16 +976,22 @@ const ResumeBuilderContent = () => {
     }
     try {
       setIsDownloading(true);
-      const blob = await downloadResumePdf(resumeId, templateSettings, uiLanguage);
+      const blob =
+        format === 'docx'
+          ? await downloadResumeDocx(resumeId, templateSettings.pageSize)
+          : await downloadResumePdf(resumeId, templateSettings, uiLanguage);
       const company = getCompanyFromTitle(resumeTitle);
       const userName = resumeData.personalInfo?.name?.trim() || null;
-      const filename = buildResumeFilename(userName, company, resumeId, 'resume');
+      const filename = buildResumeFilename(userName, company, resumeId, 'resume', format);
       downloadBlobAsFile(blob, filename);
       showNotification(t('builder.alerts.downloadSuccess'), 'success');
     } catch (error) {
       console.error('Failed to download resume:', error);
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        const fallbackUrl = getResumePdfUrl(resumeId, templateSettings, uiLanguage);
+        const fallbackUrl =
+          format === 'docx'
+            ? getResumeDocxUrl(resumeId, templateSettings.pageSize)
+            : getResumePdfUrl(resumeId, templateSettings, uiLanguage);
         const didOpen = openUrlInNewTab(fallbackUrl);
         if (!didOpen) {
           showNotification(t('common.popupBlocked', { url: fallbackUrl }), 'warning');
@@ -1093,7 +1103,7 @@ const ResumeBuilderContent = () => {
     return false;
   };
 
-  const handleDownloadCoverLetter = async () => {
+  const handleDownloadCoverLetter = async (format: 'pdf' | 'docx' = 'pdf') => {
     if (!resumeId) {
       showNotification(t('builder.alerts.coverLetterDownloadRequiresResume'), 'warning');
       return;
@@ -1107,15 +1117,21 @@ const ResumeBuilderContent = () => {
       if (!(await flushCoverLetterForExport())) {
         return;
       }
-      const blob = await downloadCoverLetterPdf(resumeId, templateSettings.pageSize, uiLanguage);
+      const blob =
+        format === 'docx'
+          ? await downloadCoverLetterDocx(resumeId, templateSettings.pageSize)
+          : await downloadCoverLetterPdf(resumeId, templateSettings.pageSize, uiLanguage);
       const company = getCompanyFromTitle(resumeTitle);
       const userName = resumeData.personalInfo?.name?.trim() || null;
-      const filename = buildResumeFilename(userName, company, resumeId, 'cover-letter');
+      const filename = buildResumeFilename(userName, company, resumeId, 'cover-letter', format);
       downloadBlobAsFile(blob, filename);
     } catch (error) {
       console.error('Failed to download cover letter:', error);
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        const fallbackUrl = getCoverLetterPdfUrl(resumeId, templateSettings.pageSize, uiLanguage);
+        const fallbackUrl =
+          format === 'docx'
+            ? getCoverLetterDocxUrl(resumeId, templateSettings.pageSize)
+            : getCoverLetterPdfUrl(resumeId, templateSettings.pageSize, uiLanguage);
         const didOpen = openUrlInNewTab(fallbackUrl);
         if (!didOpen) {
           showNotification(t('common.popupBlocked', { url: fallbackUrl }), 'warning');
@@ -1448,11 +1464,20 @@ const ResumeBuilderContent = () => {
                   <Button
                     variant="success"
                     size="sm"
-                    onClick={handleDownload}
+                    onClick={() => handleDownload('pdf')}
                     disabled={!resumeId || isDownloading}
                   >
                     <Download className="w-4 h-4" />
                     {isDownloading ? t('common.generating') : t('common.download')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownload('docx')}
+                    disabled={!resumeId || isDownloading}
+                  >
+                    <Download className="w-4 h-4" />
+                    {isDownloading ? t('common.generating') : 'DOCX'}
                   </Button>
                 </>
               )}
@@ -1476,11 +1501,20 @@ const ResumeBuilderContent = () => {
                   <Button
                     variant="success"
                     size="sm"
-                    onClick={handleDownloadCoverLetter}
+                    onClick={() => handleDownloadCoverLetter('pdf')}
                     disabled={!resumeId || isDownloading}
                   >
                     <Download className="w-4 h-4" />
                     {isDownloading ? t('common.generating') : t('common.download')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadCoverLetter('docx')}
+                    disabled={!resumeId || isDownloading}
+                  >
+                    <Download className="w-4 h-4" />
+                    {isDownloading ? t('common.generating') : 'DOCX'}
                   </Button>
                 </>
               )}

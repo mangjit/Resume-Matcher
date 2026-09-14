@@ -155,9 +155,9 @@ Analyze your resume against the job description with a match score, keyword high
 
 ![Resume Scoring and Keyword Highlight](assets/keyword_highlighter.png)
 
-### PDF Export
+### PDF & DOCX Export
 
-Export your tailored resume and cover letter in PDF.
+Export your tailored resume and cover letter in PDF or DOCX.
 
 ### Templates
 

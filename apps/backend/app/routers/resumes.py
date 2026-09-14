@@ -24,6 +24,7 @@ from app.ai_budget import (
 from app.config_cache import get_content_language, load_config as _load_config
 from app.database import DatabaseBusyError, ProcessingFinishOutcome, ResumeNotFoundError, db
 from app.pdf import render_resume_pdf, PDFRenderError
+from app.docx_export import DOCX_MIME, build_cover_letter_docx, build_resume_docx
 from app.config import settings
 from app.preview import (
     PreviewBusyError,
@@ -2040,6 +2041,39 @@ async def download_resume_pdf(
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
 
 
+@router.get("/{resume_id}/docx")
+async def download_resume_docx(
+    resume_id: str,
+    pageSize: str = Query("A4", pattern="^(A4|LETTER)$"),
+) -> Response:
+    """Generate a DOCX for a resume from its structured data.
+
+    Unlike the PDF export (headless Chromium over the print page), DOCX is
+    built directly from ``processed_data`` with python-docx — no browser
+    needed, so it stays fast on small hosts. The user's section ordering
+    and visibility are honored; empty sections are skipped.
+    """
+    resume = await db.get_resume(resume_id)
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    data = _get_original_resume_data(resume)
+    if not data:
+        raise HTTPException(
+            status_code=422,
+            detail="Resume has no structured data yet; process it before exporting DOCX",
+        )
+    try:
+        docx_bytes = build_resume_docx(data, page_size=pageSize)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="resume_{resume_id}.docx"'
+    }
+    return Response(content=docx_bytes, media_type=DOCX_MIME, headers=headers)
+
+
 @router.delete("/{resume_id}")
 async def delete_resume(resume_id: str) -> dict:
     """Delete a resume by ID."""
@@ -2487,3 +2521,43 @@ async def download_cover_letter_pdf(
         "Content-Disposition": f'attachment; filename="cover_letter_{resume_id}.pdf"'
     }
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
+
+
+@router.get("/{resume_id}/cover-letter/docx")
+async def download_cover_letter_docx(
+    resume_id: str,
+    pageSize: str = Query("A4", pattern="^(A4|LETTER)$"),
+) -> Response:
+    """Generate a DOCX for a cover letter (contact header + body paragraphs).
+
+    Args:
+        resume_id: The ID of the resume containing the cover letter
+        pageSize: A4 or LETTER
+    """
+    resume = await db.get_resume(resume_id)
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    cover_letter = resume.get("cover_letter")
+    if not cover_letter:
+        raise HTTPException(
+            status_code=404, detail="No cover letter found for this resume"
+        )
+
+    personal_info: dict[str, Any] = {}
+    data = _get_original_resume_data(resume)
+    if data:
+        try:
+            personal_info = ResumeData.model_validate(
+                normalize_resume_data(dict(data))
+            ).personalInfo.model_dump()
+        except ValidationError:
+            personal_info = {}
+
+    docx_bytes = build_cover_letter_docx(
+        personal_info, cover_letter, page_size=pageSize
+    )
+    headers = {
+        "Content-Disposition": f'attachment; filename="cover_letter_{resume_id}.docx"'
+    }
+    return Response(content=docx_bytes, media_type=DOCX_MIME, headers=headers)
