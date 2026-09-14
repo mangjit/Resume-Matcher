@@ -29,6 +29,11 @@ services:
       # For Ollama running on host machine, use host.docker.internal:
       # - LLM_API_BASE=http://host.docker.internal:11434
       - LLM_API_BASE=${LLM_API_BASE:-}
+      # MongoDB (optional persistent store). When MONGODB_URI is set, all app
+      # data lives in MongoDB instead of the local SQLite file (useful for
+      # hosted deploys with ephemeral filesystems). Blank = SQLite.
+      - MONGODB_URI=${MONGODB_URI:-}
+      - MONGODB_DATABASE=${MONGODB_DATABASE:-resume_matcher}
       # CORS origins (JSON array format). FRONTEND_BASE_URL is auto-included.
       #- CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
     restart: unless-stopped

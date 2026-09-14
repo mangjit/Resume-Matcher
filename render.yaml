@@ -6,9 +6,12 @@
 # Notes:
 # - The app listens on Render's injected PORT automatically (see docker/start.sh).
 # - FRONTEND_BASE_URL defaults to Render's RENDER_EXTERNAL_URL for CORS.
-# - FREE tier = no persistent disk: the SQLite DB, resumes, and settings are
-#   wiped on every restart/redeploy. Free services also sleep after 15 min idle.
-# - For persistence, upgrade to Starter+: set `plan: starter` and add:
+# - Persistence is via MongoDB (MONGODB_URI below, e.g. a free Atlas cluster).
+#   Without it the app falls back to SQLite on Render's ephemeral filesystem
+#   and all data is wiped on every restart/redeploy.
+# - FREE tier services sleep after 15 min idle (~1 min to wake up).
+# - Alternative to MongoDB: upgrade to Starter+ (set `plan: starter`) and add
+#   a disk so the local SQLite file persists:
 #     disk:
 #       name: resume-data
 #       mountPath: /app/backend/data
@@ -32,3 +35,9 @@ services:
       # (e.g. another provider/model or an Ollama base URL).
       - key: LLM_API_KEY
         sync: false
+      # MongoDB connection string (Atlas: Database → Connect → Drivers).
+      # When set, all app data lives in MongoDB instead of local SQLite.
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DATABASE
+        value: resume_matcher

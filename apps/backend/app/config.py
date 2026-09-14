@@ -374,6 +374,27 @@ class Settings(BaseSettings):
             raise ValueError(f"Invalid LOG_LEVEL: {value}. Allowed: {ALLOWED_LOG_LEVELS}")
         return value
 
+    # MongoDB Configuration (optional persistent store).
+    # When MONGODB_URI is set, the app uses MongoDB instead of the local
+    # SQLite file — e.g. a free MongoDB Atlas cluster for hosted deploys
+    # (Render free tier has an ephemeral filesystem). When unset/blank,
+    # the local SQLite database is used.
+    mongodb_uri: str | None = None
+    mongodb_database: str = "resume_matcher"
+
+    @field_validator("mongodb_uri", mode="before")
+    @classmethod
+    def normalize_mongodb_uri(cls, v: Any) -> str | None:
+        """Treat blank as unset; fail fast on non-MongoDB URIs."""
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return None
+        uri = str(v).strip()
+        if not uri.startswith(("mongodb://", "mongodb+srv://")):
+            raise ValueError(
+                "Invalid MONGODB_URI: must start with mongodb:// or mongodb+srv://"
+            )
+        return uri
+
     # CORS Configuration
     cors_origins: list[str] = [
         "http://localhost:3000",

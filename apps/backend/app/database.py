@@ -1241,5 +1241,20 @@ class Database:
             uploads_dir.mkdir(parents=True, exist_ok=True)
 
 
+def _build_default_database() -> "Database | Any":
+    """Build the global database instance from settings.
+
+    When ``MONGODB_URI`` is set the MongoDB backend is used (e.g. a free
+    Atlas cluster for hosted deploys); otherwise the local SQLite database.
+    The import is lazy so ``app.database`` keeps working without Motor
+    installed when the MongoDB backend is not selected.
+    """
+    if settings.mongodb_uri:
+        from app.mongo_database import MongoDatabase
+
+        return MongoDatabase()
+    return Database()
+
+
 # Global database instance
-db = Database()
+db = _build_default_database()

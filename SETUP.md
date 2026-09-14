@@ -432,7 +432,7 @@ npm run dev -- -p 3001
 
 ### Database Management
 
-Resume Matcher uses TinyDB (JSON file storage). All data is in `apps/backend/data/`:
+Resume Matcher uses SQLite by default. All data is in `apps/backend/data/`:
 
 ```bash
 # View database files
@@ -444,6 +444,24 @@ cp -r apps/backend/data apps/backend/data-backup
 # Reset everything (start fresh)
 rm -rf apps/backend/data
 ```
+
+#### MongoDB (optional persistent store)
+
+Set `MONGODB_URI` to store all data in MongoDB instead of SQLite — recommended
+for hosted deploys with an ephemeral filesystem (e.g. Render's free tier).
+A free MongoDB Atlas (M0) cluster works fine:
+
+1. Create a free cluster at [mongodb.com/atlas](https://www.mongodb.com/atlas),
+   plus a database user and network access (`0.0.0.0/0` for hosted apps).
+2. Get the connection string: **Database → Connect → Drivers → Python**.
+3. Set it in the backend `.env` (local) or the host's environment (deploy):
+   ```env
+   MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/<dbname>?retryWrites=true&w=majority
+   MONGODB_DATABASE=resume_matcher
+   ```
+4. Restart. Collections and indexes are created automatically on first use.
+
+Leave `MONGODB_URI` blank to keep using SQLite.
 
 ---
 

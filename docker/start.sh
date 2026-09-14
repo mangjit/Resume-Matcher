@@ -167,6 +167,16 @@ if [ -n "${LLM_API_BASE:-}" ] || [ -n "${LLM_API_BASE_FILE:-}" ]; then
     file_env "LLM_API_BASE"
 fi
 
+# Optional MongoDB backend (blank/unset = local SQLite). Guarded like the
+# LLM_* overrides so empty values don't shadow backend defaults.
+if [ -n "${MONGODB_URI:-}" ] || [ -n "${MONGODB_URI_FILE:-}" ]; then
+    file_env "MONGODB_URI"
+fi
+
+if [ -n "${MONGODB_DATABASE:-}" ] || [ -n "${MONGODB_DATABASE_FILE:-}" ]; then
+    file_env "MONGODB_DATABASE"
+fi
+
 # On Render, default the public base URL (used for CORS) to the platform URL
 # unless FRONTEND_BASE_URL was set explicitly.
 if [ -z "${FRONTEND_BASE_URL:-}" ] && [ -n "${RENDER_EXTERNAL_URL:-}" ]; then
