@@ -1683,12 +1683,12 @@ const ResumeBuilderContent = () => {
                   {
                     id: 'cover-letter',
                     label: t('builder.previewTabs.coverLetter'),
-                    disabled: !coverLetter,
+                    disabled: !isTailoredResume,
                   },
                   {
                     id: 'outreach',
                     label: t('builder.previewTabs.outreach'),
-                    disabled: !outreachMessage,
+                    disabled: !isTailoredResume,
                   },
                   {
                     id: 'interview-prep',
